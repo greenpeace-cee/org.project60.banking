@@ -132,8 +132,11 @@ class CRM_Banking_PluginImpl_Matcher_DefaultOptions extends CRM_Banking_PluginMo
 
         foreach ($cids as $cid) {
           if ($cid) {
-            $contribution = civicrm_api('Contribution', 'getsingle', array('version' => 3, 'id' => $cid));
-            if (!empty($contribution['is_error'])) {
+            $contribution = \Civi\Api4\Contribution::get(FALSE)
+              ->addWhere('id', '=', $cid)
+              ->execute()
+              ->first();
+            if (empty($contribution['id'])) {
               CRM_Core_Session::setStatus(sprintf(E::ts("Couldn't find contribution #%s"), $cid), E::ts('Error'), 'error');
               continue;
             }

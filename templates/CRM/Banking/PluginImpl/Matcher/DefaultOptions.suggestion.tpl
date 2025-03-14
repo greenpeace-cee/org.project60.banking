@@ -84,7 +84,7 @@
   let contribution_ids_injected = false;
 
   {literal}
-  
+
   // add 'refresh list' action after all AJAX calls
   cj(document).on('crmPopupClose', manual_match_refresh_list);
   cj(document).on('crmPopupFormSuccess', manual_match_refresh_list);
@@ -102,8 +102,8 @@
     });
   }
 
-  /** 
-   * refresh the table showing the related contributions 
+  /**
+   * refresh the table showing the related contributions
    */
   function manual_match_refresh_list() {
     // clear the table
@@ -116,20 +116,19 @@
       let cid = parseInt(list[cid_idx]);
       if (!isNaN(cid) && cid>0) {
         // load the contribution
-        CRM.api3("Contribution", "get", {
-            "id": cid,
-            "sequential": 1,
-            "return": "{/literal}{$manual_contribution_get_return_params}{literal}"
-            },
-            { success: manual_match_add_data_to_list }
-        );
+        CRM.api4('Contribution', 'get', {
+          select: ['*', 'contact_id.display_name', 'contribution_status_id:label', 'financial_type_id:label'],
+          where: [['id', '=', cid]]
+        }).then(manual_match_add_data_to_list, function(failure) {
+          CRM.alert(failure, ts('Error while fetching contribution'), 'error');
+        });
       }
     }
   }
 
-  /** 
-   * Loads a contact into to the option list. 
-   * It also triggers loading the next id from the list in the hidden field 
+  /**
+   * Loads a contact into to the option list.
+   * It also triggers loading the next id from the list in the hidden field
    */
   function manual_match_load_contact_into_contact_list(contact_id, select) {
     CRM.api3("Contact", "get", {"sequential": 1, "id": contact_id},
@@ -169,7 +168,7 @@
 
             // ...add to selector list
             cj("#manual_match_contact_selector").append(item);
-          
+
           } else {
             alert("Contact [" + contact_id + "] not found!");
 
@@ -195,8 +194,8 @@
       });
   }
 
-  /** 
-   * create/refresh the table showing the related contacts 
+  /**
+   * create/refresh the table showing the related contacts
    */
   function manual_match_create_contact_list() {
     // clear the options
@@ -210,13 +209,13 @@
     }
   }
 
-  /** 
-   * append the given contribution data set to the contribution list 
+  /**
+   * append the given contribution data set to the contribution list
    */
   function manual_match_add_data_to_list(data) {
-    if (data.count>0) {
+    if (data.length>0) {
       cj("#manual_match_contribution_table tr.manual-match-placeholder").hide();
-      var contribution = data.values[0];
+      var contribution = data[0];
       manual_match_add_contribution_to_field(contribution.id);
 
       // add to table, if not already there
@@ -228,17 +227,17 @@
         let row = "<tr class=\"manual-match-contribution\" id=\"manual_match_row_cid_" + contribution.id + "\">";
         row += "<td><a onclick=\"manual_match_remove_contribution(" + contribution.id + ");\">[{/literal}{ts domain='org.project60.banking'}remove{/ts}{literal}]</a>";
         row += "&nbsp;<a href=\"" + view_link + "\" target=\"_blank\" class=\"crm-popup\">[{/literal}{ts domain='org.project60.banking'}view{/ts}{literal}]</a></td>";
-        row += "<td>" + contribution.display_name + "</td>";
-        row += "<td>" + contribution.financial_type + "</td>";
+        row += "<td>" + contribution['contact_id.display_name'] + "</td>";
+        row += "<td>" + contribution['financial_type_id:label'] + "</td>";
         row += "<td>" + contribution.receive_date.replace(" 00:00:00","");  + "</td>";
         if (contribution.contribution_status != "{/literal}{ts domain='org.project60.banking'}Completed{/ts}{literal}") {
-          row += "<td >" + contribution.contribution_status + "</td>";
+          row += "<td >" + contribution['contribution_status_id:label'] + "</td>";
         } else {
           // if this a cancellation, mark it:
           if (parseFloat({/literal}{$btx.amount}{literal}) < 0) {
-            row += "<td>" + contribution.contribution_status + "{/literal}{ts domain='org.project60.banking'}<br/><b>Will be cancelled.</b>{/ts}{literal}</td>";
+            row += "<td>" + contribution['contribution_status_id:label'] + "{/literal}{ts domain='org.project60.banking'}<br/><b>Will be cancelled.</b>{/ts}{literal}</td>";
           } else {
-            row += "<td style=\"color: red;\"><b>" + contribution.contribution_status + "</b></td>";
+            row += "<td style=\"color: red;\"><b>" + contribution['contribution_status_id:label'] + "</b></td>";
           }
         }
         row += "<td name=\"amount\" align=\"right\">" + parseFloat(contribution.total_amount).toFixed(2) + " " + contribution.currency + "</td>";
@@ -249,7 +248,7 @@
     }
   }
 
-  /** 
+  /**
    * update the sum field, showing the total of all related contribtions
    */
   function manual_match_update_sum() {
@@ -269,7 +268,7 @@
     }
   }
 
-  /** 
+  /**
    * create a new contribution with the selected contact
    */
   function manual_match_create_contribution() {
@@ -282,9 +281,9 @@
     }
     // ok, we have a contact -> create a new (test) contribution
     CRM.api3("Contribution", "create", { "sequential": 1,
-                                        "contact_id": contact_id, 
-                                        "is_test": 1, 
-                                        "total_amount": parseFloat({/literal}{$btx.amount}{literal}).toFixed(2), 
+                                        "contact_id": contact_id,
+                                        "is_test": 1,
+                                        "total_amount": parseFloat({/literal}{$btx.amount}{literal}).toFixed(2),
                                         "is_pay_later": 1,
                                         "receive_date": "{/literal}{$booking_date}{literal}",
                                         "currency": "{/literal}{$btx.currency}{literal}",
@@ -305,10 +304,10 @@
         // ...also open editor
         banking_open_link("{/literal}{$edit_contribution_link}{literal}", {"__contributionid__":contribution.id, "__contactid__":contribution.contact_id}, true);
       }
-    });                    
+    });
   }
 
-  /** 
+  /**
    * open a create contribution dialogue. Unfortunately it is not possible
    * to automatically add this contribution to the list.
    */
@@ -316,7 +315,7 @@
     banking_open_link("{/literal}{$new_contribution_link}{literal}", {}, false);
   }
 
-  /** 
+  /**
    * triggered when the user wants to manually add a contribution as related
    */
   function manual_match_add_contribution() {
@@ -381,12 +380,12 @@
         manual_match_load_contact_into_contact_list(contact_id, true);
       }
     }
-    
-    cj("#manual_match_add_contact_input").val("");            
+
+    cj("#manual_match_add_contact_input").val("");
     return false;
   }
 
-  /** 
+  /**
    * will add the given contribution_id to the (hidden) input field
    */
   function manual_match_add_contribution_to_field(contribution_id) {
@@ -399,7 +398,7 @@
     }
   }
 
-  /** 
+  /**
    * will remove the given contribution from the list of related contributions
    */
   function manual_match_remove_contribution(contribution_id) {
@@ -414,7 +413,7 @@
       manual_match_refresh_list();
   }
 
-  /** 
+  /**
    * will open a contact view with the selected panel
    */
   function manual_match_show_selected_contact() {
