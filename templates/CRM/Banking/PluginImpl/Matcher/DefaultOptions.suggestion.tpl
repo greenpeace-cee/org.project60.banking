@@ -124,13 +124,12 @@
       let cid = parseInt(list[cid_idx]);
       if (!isNaN(cid) && cid>0) {
         // load the contribution
-        CRM.api3("Contribution", "get", {
-            "id": cid,
-            "sequential": 1,
-            "return": "{/literal}{$manual_contribution_get_return_params}{literal}"
-            },
-            { success: manual_match_add_data_to_list }
-        );
+        CRM.api4('Contribution', 'get', {
+          select: ['*', 'contact_id.display_name', 'contribution_status_id:label', 'financial_type_id:label'],
+          where: [['id', '=', cid]]
+        }).then(manual_match_add_data_to_list, function(failure) {
+          CRM.alert(failure, ts('Error while fetching contribution'), 'error');
+        });
       }
     }
   }
@@ -222,9 +221,9 @@
    * append the given contribution data set to the contribution list
    */
   function manual_match_add_data_to_list(data) {
-    if (data.count>0) {
+    if (data.length>0) {
       cj("#manual_match_contribution_table tr.manual-match-placeholder").hide();
-      var contribution = data.values[0];
+      var contribution = data[0];
       manual_match_add_contribution_to_field(contribution.id);
 
       // add to table, if not already there
@@ -236,17 +235,17 @@
         let row = "<tr class=\"manual-match-contribution\" id=\"manual_match_row_cid_" + contribution.id + "\">";
         row += "<td><a onclick=\"manual_match_remove_contribution(" + contribution.id + ");\">[{/literal}{ts domain='org.project60.banking'}remove{/ts}{literal}]</a>";
         row += "&nbsp;<a href=\"" + view_link + "\" target=\"_blank\" class=\"crm-popup\">[{/literal}{ts domain='org.project60.banking'}view{/ts}{literal}]</a></td>";
-        row += "<td>" + contribution.display_name + "</td>";
-        row += "<td>" + contribution.financial_type + "</td>";
+        row += "<td>" + contribution['contact_id.display_name'] + "</td>";
+        row += "<td>" + contribution['financial_type_id:label'] + "</td>";
         row += "<td>" + contribution.receive_date.replace(" 00:00:00","");  + "</td>";
         if (contribution.contribution_status != "{/literal}{ts domain='org.project60.banking'}Completed{/ts}{literal}") {
-          row += "<td >" + contribution.contribution_status + "</td>";
+          row += "<td >" + contribution['contribution_status_id:label'] + "</td>";
         } else {
           // if this a cancellation, mark it:
           if (parseFloat({/literal}{$btx.amount}{literal}) < 0) {
-            row += "<td>" + contribution.contribution_status + "{/literal}{ts domain='org.project60.banking'}<br/><b>Will be cancelled.</b>{/ts}{literal}</td>";
+            row += "<td>" + contribution['contribution_status_id:label'] + "{/literal}{ts domain='org.project60.banking'}<br/><b>Will be cancelled.</b>{/ts}{literal}</td>";
           } else {
-            row += "<td style=\"color: red;\"><b>" + contribution.contribution_status + "</b></td>";
+            row += "<td style=\"color: red;\"><b>" + contribution['contribution_status_id:label'] + "</b></td>";
           }
         }
         row += "<td name=\"amount\" align=\"right\">" + parseFloat(contribution.total_amount).toFixed(2) + " " + contribution.currency + "</td>";
