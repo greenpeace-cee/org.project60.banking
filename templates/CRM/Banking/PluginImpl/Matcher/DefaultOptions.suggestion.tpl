@@ -163,8 +163,12 @@
               var item = "<option value=\""+ contact.id + "\">"+item_label+"</option>";
             }
 
-            // remove dummy if still in there...
-            cj("#manual_match_contact_selector option[value=0]").remove();
+            // Update the label of the dummy option once another option is added to the list
+            const dummy = cj("#manual_match_contact_selector option[value=0]");
+            dummy.text(" -- select a contact -- ");
+
+            // Remove the dummy option if there is a 100% match
+            if (percent === 1) dummy.remove();
 
             // ...add to selector list
             cj("#manual_match_contact_selector").append(item);
