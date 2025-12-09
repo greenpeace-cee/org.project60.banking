@@ -140,7 +140,7 @@
             // generate precision indicator
             var percent = 1.0; // default value
             if (contact.id in contact_ids2probability)
-              percent = contact_ids2probability[contact.id];
+              percent = parseFloat(contact_ids2probability[contact.id]);
             percent_string = Math.floor(percent * 100.0) + "%";
             if (percent < 0.1) {
               percent_string = "0" + percent_string;
